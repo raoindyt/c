@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat - Dark Minimalist</title>
+    <title>AI Chat - Dark Minimalist (Debug Mode)</title>
     <script src="https://js.puter.com/v2/"></script>
     <style>
         :root {
@@ -17,6 +17,7 @@
             --ai-message: #2d2d2d;
             --success: #03dac6;
             --error: #cf6679;
+            --debug: #ff9800;
         }
         
         * {
@@ -71,6 +72,11 @@
             color: #000;
         }
         
+        .btn-debug {
+            background-color: var(--debug);
+            color: #000;
+        }
+        
         .btn:hover {
             opacity: 0.8;
         }
@@ -121,6 +127,14 @@
         
         .ai-message {
             background-color: var(--bg-tertiary);
+        }
+        
+        .debug-message {
+            background-color: rgba(255, 152, 0, 0.1);
+            border: 1px solid var(--debug);
+            color: var(--debug);
+            font-family: monospace;
+            font-size: 0.9rem;
         }
         
         .notification {
@@ -206,14 +220,70 @@
         .hidden {
             display: none;
         }
+        
+        .auth-prompt {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+        
+        .auth-prompt p {
+            margin-bottom: 1rem;
+        }
+        
+        .debug-panel {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--debug);
+            border-radius: 4px;
+            margin: 1rem;
+            padding: 1rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .debug-panel h3 {
+            color: var(--debug);
+            margin-bottom: 0.5rem;
+        }
+        
+        .debug-toggle {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            background-color: var(--debug);
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem;
+            cursor: pointer;
+            z-index: 1000;
+        }
+        
+        .debug-content {
+            position: fixed;
+            bottom: 4rem;
+            right: 1rem;
+            width: 80%;
+            max-width: 500px;
+            max-height: 70vh;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--debug);
+            border-radius: 4px;
+            padding: 1rem;
+            z-index: 1000;
+            overflow-y: auto;
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>AI CONVERSATION</h1>
+        <h1>AI CONVERSATION (DEBUG MODE)</h1>
         <div class="auth-buttons">
             <button id="sign-in-btn" class="btn btn-primary">Sign In</button>
             <button id="sign-out-btn" class="btn hidden">Sign Out</button>
+            <button id="debug-btn" class="btn btn-debug">Debug</button>
             <div id="user-info" class="user-info hidden">
                 <span id="username"></span>
             </div>
@@ -233,6 +303,10 @@
     
     <div class="chat-container">
         <div id="chat-messages"></div>
+        <div id="auth-prompt" class="auth-prompt">
+            <p>Please sign in to start chatting with the AI.</p>
+            <button id="sign-in-prompt-btn" class="btn btn-primary">Sign In</button>
+        </div>
         <div id="streaming-indicator" class="streaming-indicator" style="display: none;">AI is thinking...</div>
     </div>
     
@@ -241,11 +315,47 @@
         <button id="send-button" disabled>Send</button>
     </div>
     
+    <div id="debug-content" class="debug-content hidden">
+        <h3>Debug Information</h3>
+        <div id="debug-info"></div>
+        <button id="clear-debug" class="btn" style="margin-top: 1rem;">Clear Debug Log</button>
+    </div>
+    
+    <button id="debug-toggle" class="debug-toggle">Debug</button>
+    
     <footer>
         <p>Powered by <a href="https://developer.puter.com" target="_blank">Puter AI</a></p>
     </footer>
 
     <script>
+        // Debug logging
+        const debugLogs = [];
+        
+        function logDebug(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = {
+                timestamp,
+                message,
+                data
+            };
+            
+            debugLogs.push(logEntry);
+            console.log(`[DEBUG ${timestamp}] ${message}`, data);
+            
+            // Update debug panel if visible
+            updateDebugPanel();
+        }
+        
+        function updateDebugPanel() {
+            const debugInfo = document.getElementById('debug-info');
+            if (!debugInfo) return;
+            
+            debugInfo.innerHTML = debugLogs.map(log => {
+                const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
+                return `<div><strong>${log.timestamp}</strong>: ${log.message}${dataStr ? `<pre>${dataStr}</pre>` : ''}</div>`;
+            }).join('<hr>');
+        }
+        
         // DOM elements
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
@@ -257,9 +367,16 @@
         const userInfo = document.getElementById('user-info');
         const usernameSpan = document.getElementById('username');
         const notification = document.getElementById('notification');
+        const authPrompt = document.getElementById('auth-prompt');
+        const signInPromptBtn = document.getElementById('sign-in-prompt-btn');
+        const debugBtn = document.getElementById('debug-btn');
+        const debugToggle = document.getElementById('debug-toggle');
+        const debugContent = document.getElementById('debug-content');
+        const clearDebugBtn = document.getElementById('clear-debug');
 
         // Show notification
         function showNotification(message, type = 'success') {
+            logDebug(`Notification shown: ${type}`, { message });
             notification.textContent = message;
             notification.className = `notification ${type}`;
             notification.classList.remove('hidden');
@@ -267,37 +384,6 @@
             setTimeout(() => {
                 notification.classList.add('hidden');
             }, 5000);
-        }
-
-        // Update auth UI based on user status
-        function updateAuthUI() {
-            if (puter.auth.isSignedIn()) {
-                // User is signed in
-                signInBtn.classList.add('hidden');
-                signOutBtn.classList.remove('hidden');
-                userInfo.classList.remove('hidden');
-                
-                // Enable chat functionality
-                userInput.disabled = false;
-                sendButton.disabled = false;
-                
-                // Get user info
-                puter.auth.getUser().then(user => {
-                    usernameSpan.textContent = user.username;
-                });
-            } else {
-                // User is not signed in
-                signInBtn.classList.remove('hidden');
-                signOutBtn.classList.add('hidden');
-                userInfo.classList.add('hidden');
-                
-                // Disable chat functionality
-                userInput.disabled = true;
-                sendButton.disabled = true;
-                
-                // Clear chat
-                chatMessages.innerHTML = '';
-            }
         }
 
         // Add message to chat
@@ -308,11 +394,98 @@
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
+        
+        // Add debug message to chat
+        function addDebugMessage(content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message debug-message';
+            messageDiv.textContent = `[DEBUG] ${content}`;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Update auth UI based on user status
+        function updateAuthUI() {
+            try {
+                logDebug('Updating auth UI');
+                
+                // Check if puter object exists
+                if (typeof puter === 'undefined') {
+                    logDebug('Puter object not found');
+                    addDebugMessage('Puter SDK not loaded');
+                    return;
+                }
+                
+                // Check if auth module exists
+                if (!puter.auth) {
+                    logDebug('Puter auth module not available');
+                    addDebugMessage('Puter auth module not available');
+                    return;
+                }
+                
+                // Check if isSignedIn function exists
+                if (!puter.auth.isSignedIn) {
+                    logDebug('puter.auth.isSignedIn function not found');
+                    addDebugMessage('puter.auth.isSignedIn function not found');
+                    return;
+                }
+                
+                const isSignedIn = puter.auth.isSignedIn();
+                logDebug('Auth status check', { isSignedIn });
+                
+                if (isSignedIn) {
+                    // User is signed in
+                    logDebug('User is signed in');
+                    signInBtn.classList.add('hidden');
+                    signOutBtn.classList.remove('hidden');
+                    userInfo.classList.remove('hidden');
+                    authPrompt.classList.add('hidden');
+                    
+                    // Enable chat functionality
+                    userInput.disabled = false;
+                    sendButton.disabled = false;
+                    
+                    // Get user info
+                    if (puter.auth.getUser) {
+                        puter.auth.getUser().then(user => {
+                            logDebug('User info retrieved', user);
+                            if (user && user.username) {
+                                usernameSpan.textContent = user.username;
+                                addDebugMessage(`Signed in as: ${user.username}`);
+                            }
+                        }).catch(error => {
+                            logDebug('Error getting user info', error);
+                            addDebugMessage(`Error getting user info: ${error.message}`);
+                        });
+                    }
+                } else {
+                    // User is not signed in
+                    logDebug('User is not signed in');
+                    signInBtn.classList.remove('hidden');
+                    signOutBtn.classList.add('hidden');
+                    userInfo.classList.add('hidden');
+                    authPrompt.classList.remove('hidden');
+                    
+                    // Disable chat functionality
+                    userInput.disabled = true;
+                    sendButton.disabled = true;
+                    
+                    // Clear chat
+                    chatMessages.innerHTML = '';
+                }
+            } catch (error) {
+                logDebug('Error updating auth UI', error);
+                showNotification('Authentication error: ' + error.message, 'error');
+                addDebugMessage(`Auth UI Error: ${error.message}`);
+            }
+        }
 
         // Send message to AI
         async function sendToAI(message) {
             const selectedModel = modelSelect.value;
             const isStreaming = selectedModel.includes('claude'); // Enable streaming for Claude models
+            
+            logDebug('Sending message to AI', { message, model: selectedModel, streaming: isStreaming });
             
             // Show streaming indicator for Claude models
             if (isStreaming) {
@@ -320,8 +493,26 @@
             }
             
             try {
+                // Check if user is authenticated before sending
+                if (!puter.auth.isSignedIn()) {
+                    logDebug('User not authenticated when trying to send message');
+                    showNotification('Please sign in to use the AI chat.', 'error');
+                    addDebugMessage('Error: User not authenticated');
+                    return;
+                }
+                
+                // Check if AI module exists
+                if (!puter.ai || !puter.ai.chat) {
+                    logDebug('Puter AI module not available');
+                    addDebugMessage('Puter AI module not available');
+                    return;
+                }
+                
+                addDebugMessage(`Sending to ${selectedModel}: ${message}`);
+                
                 if (isStreaming) {
                     // Streaming response for Claude models
+                    logDebug('Starting streaming response');
                     const response = await puter.ai.chat(message, {
                         model: selectedModel,
                         stream: true
@@ -342,16 +533,25 @@
                             chatMessages.scrollTop = chatMessages.scrollHeight;
                         }
                     }
+                    
+                    logDebug('Streaming response completed', { responseLength: fullResponse.length });
+                    addDebugMessage(`Response length: ${fullResponse.length} characters`);
                 } else {
                     // Non-streaming response for other models
+                    logDebug('Starting non-streaming response');
                     const response = await puter.ai.chat(message, {
                         model: selectedModel
                     });
                     
+                    logDebug('Non-streaming response received', response);
                     addMessage('ai', response.message?.content[0]?.text || response);
+                    addDebugMessage(`Response received from ${selectedModel}`);
                 }
             } catch (error) {
-                addMessage('ai', `Error: ${error.message}`);
+                logDebug('AI chat error', error);
+                console.error('AI chat error:', error);
+                addMessage('ai', `Error: ${error.message || 'Unknown error occurred'}`);
+                addDebugMessage(`AI Error: ${error.message || 'Unknown error'}`);
             } finally {
                 // Hide streaming indicator
                 streamingIndicator.style.display = 'none';
@@ -362,8 +562,10 @@
 
         // Handle send button click
         sendButton.addEventListener('click', async () => {
+            logDebug('Send button clicked');
             const message = userInput.value.trim();
             if (message) {
+                logDebug('Sending user message', { message });
                 // Add user message to chat
                 addMessage('user', message);
                 
@@ -373,42 +575,154 @@
                 
                 // Send message to AI
                 await sendToAI(message);
+            } else {
+                logDebug('Empty message not sent');
             }
         });
 
         // Handle Enter key press
         userInput.addEventListener('keypress', (e) => {
+            logDebug('Key pressed in input', { key: e.key, disabled: sendButton.disabled });
             if (e.key === 'Enter' && !sendButton.disabled) {
                 sendButton.click();
             }
         });
 
         // Sign in handler
-        signInBtn.addEventListener('click', async () => {
+        function handleSignIn() {
+            logDebug('Sign in initiated');
             try {
-                await puter.auth.signIn();
-                updateAuthUI();
-                showNotification('Successfully signed in!');
-                addMessage('ai', 'Welcome! How can I assist you today?');
+                if (typeof puter === 'undefined') {
+                    logDebug('Puter SDK not loaded during sign in');
+                    showNotification('Puter SDK not loaded.', 'error');
+                    addDebugMessage('Error: Puter SDK not loaded');
+                    return;
+                }
+                
+                if (!puter.auth) {
+                    logDebug('Puter auth module not available during sign in');
+                    showNotification('Authentication service not available.', 'error');
+                    addDebugMessage('Error: Puter auth module not available');
+                    return;
+                }
+                
+                if (!puter.auth.signIn) {
+                    logDebug('puter.auth.signIn function not found');
+                    showNotification('Sign in function not available.', 'error');
+                    addDebugMessage('Error: puter.auth.signIn function not found');
+                    return;
+                }
+                
+                addDebugMessage('Calling puter.auth.signIn()');
+                puter.auth.signIn().then(() => {
+                    logDebug('Sign in successful');
+                    updateAuthUI();
+                    showNotification('Successfully signed in!');
+                    addMessage('ai', 'Welcome! How can I assist you today?');
+                    addDebugMessage('Sign in completed successfully');
+                }).catch(error => {
+                    logDebug('Sign in error', error);
+                    console.error('Sign in error:', error);
+                    showNotification('Sign in failed: ' + (error.message || 'Unknown error'), 'error');
+                    addDebugMessage(`Sign in failed: ${error.message || 'Unknown error'}`);
+                });
             } catch (error) {
+                logDebug('Sign in exception', error);
+                console.error('Sign in error:', error);
                 showNotification('Sign in failed: ' + error.message, 'error');
+                addDebugMessage(`Sign in exception: ${error.message}`);
             }
-        });
+        }
 
         // Sign out handler
-        signOutBtn.addEventListener('click', () => {
-            puter.auth.signOut();
-            updateAuthUI();
-            showNotification('Successfully signed out!');
-        });
-
-        // Initialize auth state
-        updateAuthUI();
-        
-        // Add welcome message if user is already signed in
-        if (puter.auth.isSignedIn()) {
-            addMessage('ai', 'Welcome back! How can I assist you today?');
+        function handleSignOut() {
+            logDebug('Sign out initiated');
+            try {
+                if (typeof puter === 'undefined') {
+                    logDebug('Puter SDK not loaded during sign out');
+                    showNotification('Puter SDK not loaded.', 'error');
+                    addDebugMessage('Error: Puter SDK not loaded');
+                    return;
+                }
+                
+                if (!puter.auth) {
+                    logDebug('Puter auth module not available during sign out');
+                    showNotification('Authentication service not available.', 'error');
+                    addDebugMessage('Error: Puter auth module not available');
+                    return;
+                }
+                
+                if (!puter.auth.signOut) {
+                    logDebug('puter.auth.signOut function not found');
+                    showNotification('Sign out function not available.', 'error');
+                    addDebugMessage('Error: puter.auth.signOut function not found');
+                    return;
+                }
+                
+                addDebugMessage('Calling puter.auth.signOut()');
+                puter.auth.signOut();
+                logDebug('Sign out completed');
+                updateAuthUI();
+                showNotification('Successfully signed out!');
+                addDebugMessage('Sign out completed successfully');
+            } catch (error) {
+                logDebug('Sign out exception', error);
+                console.error('Sign out error:', error);
+                showNotification('Sign out failed: ' + error.message, 'error');
+                addDebugMessage(`Sign out exception: ${error.message}`);
+            }
         }
+        
+        // Debug toggle
+        function toggleDebug() {
+            debugContent.classList.toggle('hidden');
+            if (!debugContent.classList.contains('hidden')) {
+                updateDebugPanel();
+            }
+        }
+        
+        // Clear debug logs
+        function clearDebugLogs() {
+            debugLogs.length = 0;
+            updateDebugPanel();
+        }
+
+        // Event listeners
+        signInBtn.addEventListener('click', handleSignIn);
+        signOutBtn.addEventListener('click', handleSignOut);
+        signInPromptBtn.addEventListener('click', handleSignIn);
+        debugBtn.addEventListener('click', toggleDebug);
+        debugToggle.addEventListener('click', toggleDebug);
+        clearDebugBtn.addEventListener('click', clearDebugLogs);
+
+        // Initialize auth state when Puter SDK is ready
+        logDebug('Page loaded, initializing');
+        addDebugMessage('Debug mode enabled');
+        
+        if (typeof puter !== 'undefined') {
+            logDebug('Puter SDK loaded');
+            addDebugMessage('Puter SDK detected');
+            
+            // Check what's available in puter object
+            const puterKeys = Object.keys(puter);
+            logDebug('Puter object keys', puterKeys);
+            addDebugMessage(`Puter modules: ${puterKeys.join(', ')}`);
+            
+            if (puter.auth) {
+                const authKeys = Object.keys(puter.auth);
+                logDebug('Puter auth keys', authKeys);
+                addDebugMessage(`Auth methods: ${authKeys.join(', ')}`);
+            }
+            
+            // Check if already initialized
+            setTimeout(updateAuthUI, 1000); // Give SDK time to initialize
+        } else {
+            logDebug('Puter SDK not found');
+            addDebugMessage('Error: Puter SDK not loaded');
+        }
+        
+        // Add initial debug message
+        addDebugMessage('Application initialized');
     </script>
 </body>
 </html>
