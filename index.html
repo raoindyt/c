@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat - Dark Minimalist</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        :root {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent: #bb86fc;
+            --user-message: #3700b3;
+            --ai-message: #2d2d2d;
+            --success: #03dac6;
+            --error: #cf6679;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        header {
+            background-color: var(--bg-secondary);
+            padding: 1rem;
+            text-align: center;
+            border-bottom: 1px solid var(--bg-tertiary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            font-weight: 300;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .auth-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background-color: var(--accent);
+            color: #000;
+        }
+        
+        .btn:hover {
+            opacity: 0.8;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .model-selector {
+            background-color: var(--bg-secondary);
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid var(--bg-tertiary);
+        }
+        
+        select {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: none;
+            padding: 0.5rem;
+            border-radius: 4px;
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .chat-container {
+            flex: 1;
+            padding: 1rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .message {
+            padding: 1rem;
+            margin-bottom: 1rem;
+            border-radius: 4px;
+            max-width: 80%;
+            align-self: flex-start;
+        }
+        
+        .user-message {
+            background-color: var(--user-message);
+            align-self: flex-end;
+        }
+        
+        .ai-message {
+            background-color: var(--bg-tertiary);
+        }
+        
+        .notification {
+            padding: 1rem;
+            margin: 1rem;
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .success {
+            background-color: rgba(3, 218, 198, 0.1);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+        
+        .error {
+            background-color: rgba(207, 102, 121, 0.1);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+        
+        .input-container {
+            display: flex;
+            padding: 1rem;
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--bg-tertiary);
+        }
+        
+        #user-input {
+            flex: 1;
+            padding: 0.8rem;
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: none;
+            border-radius: 4px;
+        }
+        
+        #send-button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 4px;
+            padding: 0.8rem 1.5rem;
+            margin-left: 0.5rem;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        #send-button:hover {
+            opacity: 0.9;
+        }
+        
+        #send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .streaming-indicator {
+            color: var(--accent);
+            font-style: italic;
+            text-align: center;
+            padding: 0.5rem;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 1rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--bg-tertiary);
+        }
+        
+        a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        a:hover {
+            text-decoration: underline;
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>AI CONVERSATION</h1>
+        <div class="auth-buttons">
+            <button id="sign-in-btn" class="btn btn-primary">Sign In</button>
+            <button id="sign-out-btn" class="btn hidden">Sign Out</button>
+            <div id="user-info" class="user-info hidden">
+                <span id="username"></span>
+            </div>
+        </div>
+    </header>
+    
+    <div id="notification" class="notification hidden"></div>
+    
+    <div class="model-selector">
+        <select id="model-select">
+            <option value="claude-sonnet-4">Claude Sonnet 4</option>
+            <option value="claude-opus-4">Claude Opus 4</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+        </select>
+    </div>
+    
+    <div class="chat-container">
+        <div id="chat-messages"></div>
+        <div id="streaming-indicator" class="streaming-indicator" style="display: none;">AI is thinking...</div>
+    </div>
+    
+    <div class="input-container">
+        <input type="text" id="user-input" placeholder="Message..." autocomplete="off" disabled>
+        <button id="send-button" disabled>Send</button>
+    </div>
+    
+    <footer>
+        <p>Powered by <a href="https://developer.puter.com" target="_blank">Puter AI</a></p>
+    </footer>
+
+    <script>
+        // DOM elements
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const modelSelect = document.getElementById('model-select');
+        const streamingIndicator = document.getElementById('streaming-indicator');
+        const signInBtn = document.getElementById('sign-in-btn');
+        const signOutBtn = document.getElementById('sign-out-btn');
+        const userInfo = document.getElementById('user-info');
+        const usernameSpan = document.getElementById('username');
+        const notification = document.getElementById('notification');
+
+        // Show notification
+        function showNotification(message, type = 'success') {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.remove('hidden');
+            
+            setTimeout(() => {
+                notification.classList.add('hidden');
+            }, 5000);
+        }
+
+        // Update auth UI based on user status
+        function updateAuthUI() {
+            if (puter.auth.isSignedIn()) {
+                // User is signed in
+                signInBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
+                userInfo.classList.remove('hidden');
+                
+                // Enable chat functionality
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                
+                // Get user info
+                puter.auth.getUser().then(user => {
+                    usernameSpan.textContent = user.username;
+                });
+            } else {
+                // User is not signed in
+                signInBtn.classList.remove('hidden');
+                signOutBtn.classList.add('hidden');
+                userInfo.classList.add('hidden');
+                
+                // Disable chat functionality
+                userInput.disabled = true;
+                sendButton.disabled = true;
+                
+                // Clear chat
+                chatMessages.innerHTML = '';
+            }
+        }
+
+        // Add message to chat
+        function addMessage(role, content) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            messageDiv.textContent = content;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Send message to AI
+        async function sendToAI(message) {
+            const selectedModel = modelSelect.value;
+            const isStreaming = selectedModel.includes('claude'); // Enable streaming for Claude models
+            
+            // Show streaming indicator for Claude models
+            if (isStreaming) {
+                streamingIndicator.style.display = 'block';
+            }
+            
+            try {
+                if (isStreaming) {
+                    // Streaming response for Claude models
+                    const response = await puter.ai.chat(message, {
+                        model: selectedModel,
+                        stream: true
+                    });
+                    
+                    // Add AI message container
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = 'message ai-message';
+                    chatMessages.appendChild(messageDiv);
+                    
+                    let fullResponse = '';
+                    
+                    // Process streamed response
+                    for await (const part of response) {
+                        if (part?.text) {
+                            fullResponse += part.text;
+                            messageDiv.textContent = fullResponse;
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    }
+                } else {
+                    // Non-streaming response for other models
+                    const response = await puter.ai.chat(message, {
+                        model: selectedModel
+                    });
+                    
+                    addMessage('ai', response.message?.content[0]?.text || response);
+                }
+            } catch (error) {
+                addMessage('ai', `Error: ${error.message}`);
+            } finally {
+                // Hide streaming indicator
+                streamingIndicator.style.display = 'none';
+                // Re-enable send button
+                sendButton.disabled = false;
+            }
+        }
+
+        // Handle send button click
+        sendButton.addEventListener('click', async () => {
+            const message = userInput.value.trim();
+            if (message) {
+                // Add user message to chat
+                addMessage('user', message);
+                
+                // Clear input and disable button while processing
+                userInput.value = '';
+                sendButton.disabled = true;
+                
+                // Send message to AI
+                await sendToAI(message);
+            }
+        });
+
+        // Handle Enter key press
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !sendButton.disabled) {
+                sendButton.click();
+            }
+        });
+
+        // Sign in handler
+        signInBtn.addEventListener('click', async () => {
+            try {
+                await puter.auth.signIn();
+                updateAuthUI();
+                showNotification('Successfully signed in!');
+                addMessage('ai', 'Welcome! How can I assist you today?');
+            } catch (error) {
+                showNotification('Sign in failed: ' + error.message, 'error');
+            }
+        });
+
+        // Sign out handler
+        signOutBtn.addEventListener('click', () => {
+            puter.auth.signOut();
+            updateAuthUI();
+            showNotification('Successfully signed out!');
+        });
+
+        // Initialize auth state
+        updateAuthUI();
+        
+        // Add welcome message if user is already signed in
+        if (puter.auth.isSignedIn()) {
+            addMessage('ai', 'Welcome back! How can I assist you today?');
+        }
+    </script>
+</body>
+</html>
