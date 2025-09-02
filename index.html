@@ -275,6 +275,14 @@
             z-index: 1000;
             overflow-y: auto;
         }
+        
+        .model-info {
+            background-color: var(--bg-tertiary);
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
     </style>
 </head>
 <body>
@@ -294,11 +302,20 @@
     
     <div class="model-selector">
         <select id="model-select">
+            <!-- Updated model names to include Claude 4 models -->
             <option value="claude-sonnet-4">Claude Sonnet 4</option>
             <option value="claude-opus-4">Claude Opus 4</option>
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (2025)</option>
+            <option value="claude-opus-4-1">Claude Opus 4.1</option>
             <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4o">GPT-4o</option>
+            <option value="gpt-4-turbo">GPT-4 Turbo</option>
             <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            <option value="gpt-5-nano">GPT-5 Nano (Default)</option>
         </select>
+        <div class="model-info" id="model-info">
+            Select an AI model to use for your conversation
+        </div>
     </div>
     
     <div class="chat-container">
@@ -356,6 +373,19 @@
             }).join('<hr>');
         }
         
+        // Model information
+        const modelInfo = {
+            "claude-sonnet-4": "Anthropic's Claude Sonnet 4 - balanced model with strong performance",
+            "claude-opus-4": "Anthropic's Claude Opus 4 - powerful model for complex tasks",
+            "claude-sonnet-4-20250514": "Anthropic's Claude Sonnet 4 (2025) - latest version of Sonnet 4",
+            "claude-opus-4-1": "Anthropic's Claude Opus 4.1 - updated version of Opus 4",
+            "gpt-4": "OpenAI's GPT-4 - highly capable model for complex tasks",
+            "gpt-4o": "OpenAI's GPT-4o - multimodal model with vision capabilities",
+            "gpt-4-turbo": "OpenAI's GPT-4 Turbo - faster and more cost-effective than GPT-4",
+            "gpt-3.5-turbo": "OpenAI's GPT-3.5 Turbo - fast and cost-effective model",
+            "gpt-5-nano": "OpenAI's GPT-5 Nano - default lightweight model"
+        };
+        
         // DOM elements
         const chatMessages = document.getElementById('chat-messages');
         const userInput = document.getElementById('user-input');
@@ -373,6 +403,13 @@
         const debugToggle = document.getElementById('debug-toggle');
         const debugContent = document.getElementById('debug-content');
         const clearDebugBtn = document.getElementById('clear-debug');
+        const modelInfoDiv = document.getElementById('model-info');
+
+        // Update model info when selection changes
+        modelSelect.addEventListener('change', () => {
+            const selectedModel = modelSelect.value;
+            modelInfoDiv.textContent = modelInfo[selectedModel] || "Select an AI model to use for your conversation";
+        });
 
         // Show notification
         function showNotification(message, type = 'success') {
@@ -483,11 +520,12 @@
         // Send message to AI
         async function sendToAI(message) {
             const selectedModel = modelSelect.value;
-            const isStreaming = selectedModel.includes('claude'); // Enable streaming for Claude models
+            // Enable streaming for Claude models (both 3 and 4)
+            const isStreaming = selectedModel.includes('claude');
             
             logDebug('Sending message to AI', { message, model: selectedModel, streaming: isStreaming });
             
-            // Show streaming indicator for Claude models
+            // Show streaming indicator for streaming models
             if (isStreaming) {
                 streamingIndicator.style.display = 'block';
             }
@@ -544,7 +582,20 @@
                     });
                     
                     logDebug('Non-streaming response received', response);
-                    addMessage('ai', response.message?.content[0]?.text || response);
+                    
+                    // Handle different response formats
+                    let responseText = '';
+                    if (response && response.message && response.message.content && response.message.content[0] && response.message.content[0].text) {
+                        responseText = response.message.content[0].text;
+                    } else if (response && typeof response === 'string') {
+                        responseText = response;
+                    } else if (response && response.text) {
+                        responseText = response.text;
+                    } else {
+                        responseText = JSON.stringify(response);
+                    }
+                    
+                    addMessage('ai', responseText);
                     addDebugMessage(`Response received from ${selectedModel}`);
                 }
             } catch (error) {
@@ -723,6 +774,7 @@
         
         // Add initial debug message
         addDebugMessage('Application initialized');
+        addDebugMessage('Now supporting Claude 4 models: Sonnet 4, Opus 4, Sonnet 4 (2025), Opus 4.1');
     </script>
 </body>
 </html>
