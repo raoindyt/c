@@ -3,785 +3,1213 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chat</title>
+    <title>AI Chat Assistant</title>
     <script src="https://js.puter.com/v2/"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --bg-primary: #121212;
-            --bg-secondary: #1e1e1e;
-            --bg-tertiary: #2d2d2d;
-            --text-primary: #ffffff;
-            --text-secondary: #b0b0b0;
-            --accent: #bb86fc;
-            --user-message: #3700b3;
-            --ai-message: #2d2d2d;
-            --success: #03dac6;
-            --error: #cf6679;
-            --debug: #ff9800;
-        }
-        
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        :root {
+            --bg-primary: #0f0f23;
+            --bg-secondary: #1a1b3a;
+            --bg-tertiary: #262652;
+            --bg-chat: #1e1f3f;
+            --text-primary: #e8e8f0;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --accent: #7c3aed;
+            --accent-hover: #6d28d9;
+            --accent-light: #a78bfa;
+            --user-msg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --ai-msg: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            --success: #10b981;
+            --error: #ef4444;
+            --warning: #f59e0b;
+            --border: rgba(124, 58, 237, 0.2);
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
         }
         
         body {
-            background-color: var(--bg-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Animated background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(124, 58, 237, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: backgroundMove 60s linear infinite;
+            z-index: -1;
+        }
+        
+        @keyframes backgroundMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+        
+        /* Header */
+        header {
+            background: rgba(26, 27, 58, 0.8);
+            backdrop-filter: blur(20px);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: var(--shadow);
+            z-index: 100;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 1.25rem;
+            font-weight: 600;
+            background: var(--user-msg);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .logo i {
+            font-size: 1.5rem;
+            color: var(--accent);
+        }
+        
+        .header-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            font-size: 1.1rem;
+        }
+        
+        .btn-icon:hover {
+            background: var(--accent);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+        }
+        
+        /* Model Selector */
+        .model-selector {
+            background: rgba(26, 27, 58, 0.6);
+            backdrop-filter: blur(10px);
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .model-label {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .model-label i {
+            color: var(--accent-light);
+        }
+        
+        select {
+            flex: 1;
+            max-width: 300px;
+            padding: 0.75rem 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        select:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent);
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        
+        option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            padding: 0.5rem;
+        }
+        
+        /* Model Info Badge */
+        .model-info {
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, rgba(124, 58, 237, 0.1), rgba(167, 139, 250, 0.1));
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            font-size: 0.85rem;
+            color: var(--accent-light);
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-left: auto;
+        }
+        
+        .model-info i {
+            font-size: 0.9rem;
+        }
+        
+        /* Chat Container */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+        
+        /* Custom Scrollbar */
+        .chat-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .chat-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb {
+            background: var(--accent);
+            border-radius: 10px;
+        }
+        
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
+        }
+        
+        /* Messages */
+        .message {
+            max-width: 70%;
+            animation: messageSlide 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message-wrapper {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        
+        .user-message {
+            align-self: flex-end;
+        }
+        
+        .user-message .message-wrapper {
+            flex-direction: row-reverse;
+        }
+        
+        .user-message .message-avatar {
+            background: var(--user-msg);
+        }
+        
+        .ai-message .message-avatar {
+            background: var(--ai-msg);
+        }
+        
+        .message-content {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            padding: 1rem 1.25rem;
             color: var(--text-primary);
             line-height: 1.6;
-            min-height: 100vh;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        .user-message .message-content {
+            background: var(--user-msg);
+            border: none;
+            color: white;
+            border-bottom-right-radius: 4px;
+        }
+        
+        .ai-message .message-content {
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-content code {
+            background: rgba(124, 58, 237, 0.1);
+            padding: 0.2rem 0.4rem;
+            border-radius: 4px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9em;
+        }
+        
+        .message-content pre {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1rem;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 0.5rem 0;
+        }
+        
+        .message-content pre code {
+            background: none;
+            padding: 0;
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1rem;
+            color: var(--text-secondary);
+        }
+        
+        .typing-dots {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .typing-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--accent);
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.5;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+        
+        /* Input Container */
+        .input-container {
+            padding: 1.5rem;
+            background: rgba(26, 27, 58, 0.8);
+            backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        
+        .input-wrapper {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 0.25rem;
+            transition: all 0.3s;
+        }
+        
+        .input-wrapper:focus-within {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+        }
+        
+        #user-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        
+        #user-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .input-actions {
+            display: flex;
+            gap: 0.5rem;
+            padding-right: 0.5rem;
+        }
+        
+        .btn-send {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-send:hover:not(:disabled) {
+            background: var(--accent-hover);
+            transform: scale(1.05);
+        }
+        
+        .btn-send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* Notification Toast */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.95rem;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        .notification.success {
+            background: var(--success);
+            color: white;
+        }
+        
+        .notification.error {
+            background: var(--error);
+            color: white;
+        }
+        
+        .notification.warning {
+            background: var(--warning);
+            color: white;
+        }
+        
+        /* Auth Prompt */
+        .auth-prompt {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.5rem;
+            padding: 3rem;
+            text-align: center;
+        }
+        
+        .auth-prompt i {
+            font-size: 4rem;
+            color: var(--accent);
+            opacity: 0.5;
+        }
+        
+        .auth-prompt h2 {
+            color: var(--text-primary);
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .auth-prompt p {
+            color: var(--text-secondary);
+            max-width: 400px;
+        }
+        
+        .btn-primary {
+            padding: 0.75rem 2rem;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(124, 58, 237, 0.3);
+        }
+        
+        /* Empty State */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            opacity: 0.3;
+        }
+        
+        /* Debug Panel */
+        .debug-panel {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 400px;
+            max-height: 50vh;
+            background: rgba(26, 27, 58, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            z-index: 900;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
         
-        /* Header with icons */
-        header {
-            background-color: var(--bg-secondary);
-            padding: 0.8rem 1rem;
-            border-bottom: 1px solid var(--bg-tertiary);
+        .debug-header {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-bottom: 1px solid var(--border);
             display: flex;
             justify-content: space-between;
             align-items: center;
         }
         
-        .logo {
-            font-weight: 300;
-            font-size: 1.2rem;
-            letter-spacing: 1px;
-        }
-        
-        .header-icons {
-            display: flex;
-            gap: 0.8rem;
-        }
-        
-        .icon-btn {
-            background: none;
-            border: none;
-            color: var(--text-primary);
-            cursor: pointer;
-            font-size: 1.2rem;
-            width: 36px;
-            height: 36px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: background-color 0.2s;
-        }
-        
-        .icon-btn:hover {
-            background-color: var(--bg-tertiary);
-        }
-        
-        /* Model selector */
-        .model-selector {
-            background-color: var(--bg-secondary);
-            padding: 0.8rem 1rem;
-            border-bottom: 1px solid var(--bg-tertiary);
+        .debug-header h3 {
+            color: var(--warning);
+            font-size: 0.95rem;
             display: flex;
             align-items: center;
             gap: 0.5rem;
         }
         
-        .model-label {
-            font-size: 0.9rem;
-            color: var(--text-secondary);
+        .debug-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
         }
         
-        select {
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: none;
+        .debug-entry {
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .debug-time {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        
+        .debug-message {
+            color: var(--text-secondary);
+            margin: 0.25rem 0;
+        }
+        
+        .debug-data {
+            background: rgba(0, 0, 0, 0.3);
             padding: 0.5rem;
             border-radius: 4px;
-            flex: 1;
-            max-width: 250px;
-        }
-        
-        /* Chat container */
-        .chat-container {
-            flex: 1;
-            padding: 1rem;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .message {
-            padding: 1rem;
-            margin-bottom: 1rem;
-            border-radius: 12px;
-            max-width: 85%;
-            align-self: flex-start;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        
-        .user-message {
-            background-color: var(--user-message);
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
-        }
-        
-        .ai-message {
-            background-color: var(--bg-tertiary);
-            border-bottom-left-radius: 4px;
-        }
-        
-        /* Input area */
-        .input-container {
-            display: flex;
-            padding: 1rem;
-            background-color: var(--bg-secondary);
-            border-top: 1px solid var(--bg-tertiary);
-            gap: 0.5rem;
-        }
-        
-        #user-input {
-            flex: 1;
-            padding: 0.8rem 1rem;
-            background-color: var(--bg-tertiary);
-            color: var(--text-primary);
-            border: none;
-            border-radius: 24px;
-            outline: none;
-        }
-        
-        #send-button {
-            background-color: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: opacity 0.2s;
-        }
-        
-        #send-button:hover {
-            opacity: 0.9;
-        }
-        
-        #send-button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        /* Streaming indicator */
-        .streaming-indicator {
-            color: var(--accent);
-            font-style: italic;
-            text-align: center;
-            padding: 0.5rem;
-            font-size: 0.9rem;
+            margin-top: 0.5rem;
+            overflow-x: auto;
         }
         
         /* Footer */
         footer {
+            padding: 1rem;
             text-align: center;
-            padding: 0.8rem;
-            font-size: 0.7rem;
-            color: var(--text-secondary);
-            background-color: var(--bg-secondary);
-            border-top: 1px solid var(--bg-tertiary);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: rgba(26, 27, 58, 0.6);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border);
         }
         
-        a {
-            color: var(--accent);
+        footer a {
+            color: var(--accent-light);
             text-decoration: none;
+            transition: color 0.3s;
         }
         
-        a:hover {
-            text-decoration: underline;
+        footer a:hover {
+            color: var(--accent);
         }
         
-        /* Hidden elements */
+        /* Utilities */
         .hidden {
-            display: none;
+            display: none !important;
         }
         
-        /* Auth prompt */
-        .auth-prompt {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-secondary);
-        }
-        
-        .auth-prompt p {
-            margin-bottom: 1rem;
-        }
-        
-        /* Notification */
-        .notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            padding: 1rem;
-            border-radius: 8px;
-            z-index: 1000;
-            max-width: 300px;
-            font-size: 0.9rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        }
-        
-        .success {
-            background-color: rgba(3, 218, 198, 0.9);
-            color: #000;
-        }
-        
-        .error {
-            background-color: rgba(207, 102, 121, 0.9);
-            color: #fff;
-        }
-        
-        /* Debug elements */
-        .debug-toggle {
-            position: fixed;
-            bottom: 1rem;
-            right: 1rem;
-            background-color: var(--debug);
-            color: #000;
-            border: none;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            cursor: pointer;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1rem;
-        }
-        
-        .debug-content {
-            position: fixed;
-            bottom: 4rem;
-            right: 1rem;
-            width: 80%;
-            max-width: 400px;
-            max-height: 60vh;
-            background-color: var(--bg-primary);
-            border: 1px solid var(--debug);
-            border-radius: 8px;
-            padding: 1rem;
-            z-index: 1000;
-            overflow-y: auto;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        }
-        
-        .debug-content h3 {
-            color: var(--debug);
-            margin-bottom: 0.5rem;
-            font-size: 1rem;
-        }
-        
-        .clear-debug {
-            background-color: var(--debug);
-            color: #000;
-            border: none;
-            border-radius: 4px;
-            padding: 0.5rem;
-            cursor: pointer;
-            font-size: 0.8rem;
-            margin-top: 0.5rem;
-        }
-        
-        /* Model info */
-        .model-info {
-            background-color: var(--bg-tertiary);
-            padding: 0.5rem;
-            margin: 0.5rem 0;
-            border-radius: 4px;
-            font-size: 0.8rem;
-            text-align: center;
-        }
-        
-        /* Icons */
-        .icon {
-            display: inline-block;
-            width: 1em;
-            height: 1em;
-            stroke-width: 0;
-            stroke: currentColor;
-            fill: currentColor;
+        /* Responsive */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 85%;
+            }
+            
+            .debug-panel {
+                width: calc(100% - 40px);
+                right: 20px;
+                left: 20px;
+            }
+            
+            .model-info {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
     <header>
-        <div class="logo">AI</div>
-        <div class="header-icons">
-            <button id="sign-in-btn" class="icon-btn" title="Sign In">👤</button>
-            <button id="sign-out-btn" class="icon-btn hidden" title="Sign Out">🚪</button>
-            <button id="debug-btn" class="icon-btn" title="Debug">🐛</button>
+        <div class="logo">
+            <i class="fas fa-robot"></i>
+            <span>AI Assistant</span>
+        </div>
+        <div class="header-controls">
+            <button id="clear-chat-btn" class="btn-icon" title="Clear Chat">
+                <i class="fas fa-broom"></i>
+            </button>
+            <button id="sign-in-btn" class="btn-icon" title="Sign In">
+                <i class="fas fa-sign-in-alt"></i>
+            </button>
+            <button id="sign-out-btn" class="btn-icon hidden" title="Sign Out">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+            <button id="debug-btn" class="btn-icon" title="Debug">
+                <i class="fas fa-bug"></i>
+            </button>
         </div>
     </header>
     
-    <div id="notification" class="notification hidden"></div>
-    
     <div class="model-selector">
-        <span class="model-label">🤖</span>
+        <div class="model-label">
+            <i class="fas fa-microchip"></i>
+            <span>Model</span>
+        </div>
         <select id="model-select">
-            <option value="claude-sonnet-4-latest">Claude Sonnet 4 (Latest)</option>
-            <option value="claude-opus-4-latest">Claude Opus 4 (Latest)</option>
-            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (2025)</option>
-            <option value="claude-opus-4-1">Claude Opus 4.1</option>
-            <option value="claude-sonnet-4-20240620">Claude Sonnet 4 (2024)</option>
-            <option value="claude-opus-4-20240620">Claude Opus 4 (2024)</option>
+            <!-- Правильные названия моделей для Puter API -->
+            <option value="claude-3.5-sonnet">Claude 3.5 Sonnet (Default)</option>
+            <option value="claude-3-opus">Claude 3 Opus</option>
+            <option value="claude-3-haiku">Claude 3 Haiku</option>
             <option value="gpt-4">GPT-4</option>
-            <option value="gpt-4o">GPT-4o</option>
             <option value="gpt-4-turbo">GPT-4 Turbo</option>
             <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
-            <option value="gpt-5-nano">GPT-5 Nano</option>
+            <option value="mixtral-8x7b">Mixtral 8x7B</option>
+            <option value="llama-3.1-70b">Llama 3.1 70B</option>
         </select>
-    </div>
-    
-    <div class="model-info" id="model-info">
-        Anthropic's Claude Sonnet 4 (Latest)
-    </div>
-    
-    <div class="chat-container">
-        <div id="chat-messages"></div>
-        <div id="auth-prompt" class="auth-prompt hidden">
-            <p>🔒</p>
-            <button id="sign-in-prompt-btn" class="icon-btn">👤 Sign In</button>
+        <div class="model-info" id="model-info">
+            <i class="fas fa-info-circle"></i>
+            <span>Claude 3.5 Sonnet</span>
         </div>
-        <div id="streaming-indicator" class="streaming-indicator" style="display: none;">-thinking-</div>
+    </div>
+    
+    <div class="chat-container" id="chat-container">
+        <div id="auth-prompt" class="auth-prompt hidden">
+            <i class="fas fa-lock"></i>
+            <h2>Authentication Required</h2>
+            <p>Please sign in to start chatting with AI models</p>
+            <button id="sign-in-prompt-btn" class="btn-primary">
+                <i class="fas fa-sign-in-alt"></i> Sign In with Puter
+            </button>
+        </div>
+        
+        <div id="empty-state" class="empty-state hidden">
+            <i class="fas fa-comments"></i>
+            <h3>Start a Conversation</h3>
+            <p>Select a model and type your message below</p>
+        </div>
+        
+        <div id="chat-messages"></div>
+        
+        <div id="typing-indicator" class="typing-indicator hidden">
+            <div class="message ai-message">
+                <div class="message-wrapper">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <div class="typing-dots">
+                            <span></span>
+                            <span></span>
+                            <span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <div class="input-container">
-        <input type="text" id="user-input" placeholder="Message..." autocomplete="off" disabled>
-        <button id="send-button" disabled>➤</button>
+        <div class="input-wrapper">
+            <input 
+                type="text" 
+                id="user-input" 
+                placeholder="Type your message here..." 
+                autocomplete="off"
+                disabled
+            >
+            <div class="input-actions">
+                <button id="send-button" class="btn-send" disabled>
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
     </div>
     
-    <div id="debug-content" class="debug-content hidden">
-        <h3>Debug Information</h3>
-        <div id="debug-info"></div>
-        <button id="clear-debug" class="clear-debug">Clear</button>
-    </div>
+    <div id="notification" class="notification hidden"></div>
     
-    <button id="debug-toggle" class="debug-toggle">🐛</button>
+    <div id="debug-panel" class="debug-panel hidden">
+        <div class="debug-header">
+            <h3><i class="fas fa-bug"></i> Debug Console</h3>
+            <button id="clear-debug" class="btn-icon">
+                <i class="fas fa-trash"></i>
+            </button>
+        </div>
+        <div class="debug-content" id="debug-content"></div>
+    </div>
     
     <footer>
-        <p>Powered by <a href="https://developer.puter.com" target="_blank">Puter AI</a></p>
+        <p>Powered by <a href="https://puter.com" target="_blank">Puter AI</a> | Made with <i class="fas fa-heart" style="color: var(--error);"></i></p>
     </footer>
 
     <script>
-        // Debug logging
-        const debugLogs = [];
+        // Configuration
+        const CONFIG = {
+            MAX_RETRIES: 3,
+            RETRY_DELAY: 1000,
+            MAX_CONTEXT_MESSAGES: 10,
+            DEBUG_MODE: false
+        };
         
-        function logDebug(message, data = null) {
-            const timestamp = new Date().toISOString();
-            const logEntry = {
-                timestamp,
-                message,
-                data
-            };
-            
-            debugLogs.push(logEntry);
-            console.log(`[DEBUG ${timestamp}] ${message}`, data);
-            
-            // Update debug panel if visible
-            updateDebugPanel();
-        }
+        // Model configurations - ИСПРАВЛЕННЫЕ НАЗВАНИЯ МОДЕЛЕЙ
+        const MODELS = {
+            'claude-3.5-sonnet': {
+                name: 'Claude 3.5 Sonnet',
+                provider: 'Anthropic',
+                streaming: true,
+                icon: '🎭'
+            },
+            'claude-3-opus': {
+                name: 'Claude 3 Opus',
+                provider: 'Anthropic',
+                streaming: true,
+                icon: '🎼'
+            },
+            'claude-3-haiku': {
+                name: 'Claude 3 Haiku',
+                provider: 'Anthropic',
+                streaming: true,
+                icon: '🍃'
+            },
+            'gpt-4': {
+                name: 'GPT-4',
+                provider: 'OpenAI',
+                streaming: false,
+                icon: '🧠'
+            },
+            'gpt-4-turbo': {
+                name: 'GPT-4 Turbo',
+                provider: 'OpenAI',
+                streaming: false,
+                icon: '⚡'
+            },
+            'gpt-3.5-turbo': {
+                name: 'GPT-3.5 Turbo',
+                provider: 'OpenAI',
+                streaming: false,
+                icon: '💡'
+            },
+            'mixtral-8x7b': {
+                name: 'Mixtral 8x7B',
+                provider: 'Mistral',
+                streaming: false,
+                icon: '🌟'
+            },
+            'llama-3.1-70b': {
+                name: 'Llama 3.1 70B',
+                provider: 'Meta',
+                streaming: false,
+                icon: '🦙'
+            }
+        };
         
-        function updateDebugPanel() {
-            const debugInfo = document.getElementById('debug-info');
-            if (!debugInfo) return;
-            
-            debugInfo.innerHTML = debugLogs.map(log => {
-                const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
-                return `<div><strong>${log.timestamp}</strong>: ${log.message}${dataStr ? `<pre>${dataStr}</pre>` : ''}</div>`;
-            }).join('<hr>');
-        }
-        
-        // Model information
-        const modelInfo = {
-            "claude-sonnet-4-latest": "Anthropic's Claude Sonnet 4 (Latest)",
-            "claude-opus-4-latest": "Anthropic's Claude Opus 4 (Latest)",
-            "claude-sonnet-4-20250514": "Claude Sonnet 4 (2025)",
-            "claude-opus-4-1": "Claude Opus 4.1",
-            "claude-sonnet-4-20240620": "Claude Sonnet 4 (2024)",
-            "claude-opus-4-20240620": "Claude Opus 4 (2024)",
-            "gpt-4": "OpenAI's GPT-4",
-            "gpt-4o": "OpenAI's GPT-4o",
-            "gpt-4-turbo": "OpenAI's GPT-4 Turbo",
-            "gpt-3.5-turbo": "OpenAI's GPT-3.5 Turbo",
-            "gpt-5-nano": "OpenAI's GPT-5 Nano"
+        // State management
+        const state = {
+            isAuthenticated: false,
+            currentModel: 'claude-3.5-sonnet',
+            conversationHistory: [],
+            debugLogs: [],
+            isProcessing: false
         };
         
         // DOM elements
-        const chatMessages = document.getElementById('chat-messages');
-        const userInput = document.getElementById('user-input');
-        const sendButton = document.getElementById('send-button');
-        const modelSelect = document.getElementById('model-select');
-        const streamingIndicator = document.getElementById('streaming-indicator');
-        const signInBtn = document.getElementById('sign-in-btn');
-        const signOutBtn = document.getElementById('sign-out-btn');
-        const notification = document.getElementById('notification');
-        const authPrompt = document.getElementById('auth-prompt');
-        const signInPromptBtn = document.getElementById('sign-in-prompt-btn');
-        const debugBtn = document.getElementById('debug-btn');
-        const debugToggle = document.getElementById('debug-toggle');
-        const debugContent = document.getElementById('debug-content');
-        const clearDebugBtn = document.getElementById('clear-debug');
-        const modelInfoDiv = document.getElementById('model-info');
-
-        // Update model info when selection changes
-        modelSelect.addEventListener('change', () => {
-            const selectedModel = modelSelect.value;
-            modelInfoDiv.textContent = modelInfo[selectedModel] || "Select AI model";
-        });
-
-        // Show notification
-        function showNotification(message, type = 'success') {
-            logDebug(`Notification shown: ${type}`, { message });
-            notification.textContent = message;
-            notification.className = `notification ${type}`;
-            notification.classList.remove('hidden');
-            
-            setTimeout(() => {
-                notification.classList.add('hidden');
-            }, 3000);
-        }
-
-        // Add message to chat
-        function addMessage(role, content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${role}-message`;
-            messageDiv.textContent = content;
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
+        const elements = {
+            chatContainer: document.getElementById('chat-container'),
+            chatMessages: document.getElementById('chat-messages'),
+            userInput: document.getElementById('user-input'),
+            sendButton: document.getElementById('send-button'),
+            modelSelect: document.getElementById('model-select'),
+            modelInfo: document.getElementById('model-info'),
+            typingIndicator: document.getElementById('typing-indicator'),
+            signInBtn: document.getElementById('sign-in-btn'),
+            signOutBtn: document.getElementById('sign-out-btn'),
+            signInPromptBtn: document.getElementById('sign-in-prompt-btn'),
+            authPrompt: document.getElementById('auth-prompt'),
+            emptyState: document.getElementById('empty-state'),
+            notification: document.getElementById('notification'),
+            debugBtn: document.getElementById('debug-btn'),
+            debugPanel: document.getElementById('debug-panel'),
+            debugContent: document.getElementById('debug-content'),
+            clearDebugBtn: document.getElementById('clear-debug'),
+            clearChatBtn: document.getElementById('clear-chat-btn')
+        };
         
-        // Add debug message to chat
-        function addDebugMessage(content) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message ai-message';
-            messageDiv.textContent = `[DEBUG] ${content}`;
-            messageDiv.style.borderLeft = '3px solid var(--debug)';
-            chatMessages.appendChild(messageDiv);
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        // Update auth UI based on user status
-        function updateAuthUI() {
-            try {
-                logDebug('Updating auth UI');
-                
-                // Check if puter object exists
-                if (typeof puter === 'undefined') {
-                    logDebug('Puter object not found');
-                    addDebugMessage('Puter SDK not loaded');
-                    return;
-                }
-                
-                // Check if auth module exists
-                if (!puter.auth) {
-                    logDebug('Puter auth module not available');
-                    addDebugMessage('Puter auth module not available');
-                    return;
-                }
-                
-                // Check if isSignedIn function exists
-                if (!puter.auth.isSignedIn) {
-                    logDebug('puter.auth.isSignedIn function not found');
-                    addDebugMessage('puter.auth.isSignedIn function not found');
-                    return;
-                }
-                
-                const isSignedIn = puter.auth.isSignedIn();
-                logDebug('Auth status check', { isSignedIn });
-                
-                if (isSignedIn) {
-                    // User is signed in
-                    logDebug('User is signed in');
-                    signInBtn.classList.add('hidden');
-                    signOutBtn.classList.remove('hidden');
-                    authPrompt.classList.add('hidden');
-                    
-                    // Enable chat functionality
-                    userInput.disabled = false;
-                    sendButton.disabled = false;
-                    
-                    // Add welcome message if chat is empty
-                    if (chatMessages.children.length === 0) {
-                        addMessage('ai', 'Hello! How can I help you today?');
-                    }
-                } else {
-                    // User is not signed in
-                    logDebug('User is not signed in');
-                    signInBtn.classList.remove('hidden');
-                    signOutBtn.classList.add('hidden');
-                    authPrompt.classList.remove('hidden');
-                    
-                    // Disable chat functionality
-                    userInput.disabled = true;
-                    sendButton.disabled = true;
-                    
-                    // Clear chat
-                    chatMessages.innerHTML = '';
-                }
-            } catch (error) {
-                logDebug('Error updating auth UI', error);
-                showNotification('Auth error', 'error');
-                addDebugMessage(`Auth UI Error: ${error.message}`);
-            }
-        }
-
-        // Send message to AI
-        async function sendToAI(message) {
-            const selectedModel = modelSelect.value;
-            // Enable streaming for Claude models (both 3 and 4)
-            const isStreaming = selectedModel.includes('claude');
+        // Debug logging
+        function log(message, data = null, level = 'info') {
+            const timestamp = new Date().toISOString();
+            const logEntry = { timestamp, message, data, level };
             
-            logDebug('Sending message to AI', { message, model: selectedModel, streaming: isStreaming });
+            state.debugLogs.push(logEntry);
+            console.log(`[${level.toUpperCase()}] ${message}`, data || '');
             
-            // Show streaming indicator for streaming models
-            if (isStreaming) {
-                streamingIndicator.style.display = 'block';
-            }
-            
-            try {
-                // Check if user is authenticated before sending
-                if (!puter.auth.isSignedIn()) {
-                    logDebug('User not authenticated when trying to send message');
-                    showNotification('Please sign in', 'error');
-                    addDebugMessage('Error: User not authenticated');
-                    return;
-                }
-                
-                // Check if AI module exists
-                if (!puter.ai || !puter.ai.chat) {
-                    logDebug('Puter AI module not available');
-                    addDebugMessage('Puter AI module not available');
-                    return;
-                }
-                
-                addDebugMessage(`Sending to ${selectedModel}`);
-                
-                if (isStreaming) {
-                    // Streaming response for Claude models
-                    logDebug('Starting streaming response');
-                    const response = await puter.ai.chat(message, {
-                        model: selectedModel,
-                        stream: true
-                    });
-                    
-                    // Add AI message container
-                    const messageDiv = document.createElement('div');
-                    messageDiv.className = 'message ai-message';
-                    chatMessages.appendChild(messageDiv);
-                    
-                    let fullResponse = '';
-                    
-                    // Process streamed response
-                    for await (const part of response) {
-                        if (part?.text) {
-                            fullResponse += part.text;
-                            messageDiv.textContent = fullResponse;
-                            chatMessages.scrollTop = chatMessages.scrollHeight;
-                        }
-                    }
-                    
-                    logDebug('Streaming response completed', { responseLength: fullResponse.length });
-                } else {
-                    // Non-streaming response for other models
-                    logDebug('Starting non-streaming response');
-                    const response = await puter.ai.chat(message, {
-                        model: selectedModel
-                    });
-                    
-                    logDebug('Non-streaming response received', response);
-                    
-                    // Handle different response formats
-                    let responseText = '';
-                    if (response && response.message && response.message.content && response.message.content[0] && response.message.content[0].text) {
-                        responseText = response.message.content[0].text;
-                    } else if (response && typeof response === 'string') {
-                        responseText = response;
-                    } else if (response && response.text) {
-                        responseText = response.text;
-                    } else {
-                        responseText = JSON.stringify(response);
-                    }
-                    
-                    addMessage('ai', responseText);
-                }
-            } catch (error) {
-                logDebug('AI chat error', error);
-                console.error('AI chat error:', error);
-                addMessage('ai', `Error: ${error.message || 'Unknown error'}`);
-                addDebugMessage(`AI Error: ${error.message || 'Unknown error'}`);
-            } finally {
-                // Hide streaming indicator
-                streamingIndicator.style.display = 'none';
-                // Re-enable send button
-                sendButton.disabled = false;
-            }
-        }
-
-        // Handle send button click
-        sendButton.addEventListener('click', async () => {
-            logDebug('Send button clicked');
-            const message = userInput.value.trim();
-            if (message) {
-                logDebug('Sending user message', { message });
-                // Add user message to chat
-                addMessage('user', message);
-                
-                // Clear input and disable button while processing
-                userInput.value = '';
-                sendButton.disabled = true;
-                
-                // Send message to AI
-                await sendToAI(message);
-            } else {
-                logDebug('Empty message not sent');
-            }
-        });
-
-        // Handle Enter key press
-        userInput.addEventListener('keypress', (e) => {
-            logDebug('Key pressed in input', { key: e.key, disabled: sendButton.disabled });
-            if (e.key === 'Enter' && !sendButton.disabled) {
-                sendButton.click();
-            }
-        });
-
-        // Sign in handler
-        function handleSignIn() {
-            logDebug('Sign in initiated');
-            try {
-                if (typeof puter === 'undefined') {
-                    logDebug('Puter SDK not loaded during sign in');
-                    showNotification('SDK error', 'error');
-                    addDebugMessage('Error: Puter SDK not loaded');
-                    return;
-                }
-                
-                if (!puter.auth) {
-                    logDebug('Puter auth module not available during sign in');
-                    showNotification('Auth error', 'error');
-                    addDebugMessage('Error: Puter auth module not available');
-                    return;
-                }
-                
-                if (!puter.auth.signIn) {
-                    logDebug('puter.auth.signIn function not found');
-                    showNotification('Sign in error', 'error');
-                    addDebugMessage('Error: puter.auth.signIn function not found');
-                    return;
-                }
-                
-                addDebugMessage('Calling puter.auth.signIn()');
-                puter.auth.signIn().then(() => {
-                    logDebug('Sign in successful');
-                    updateAuthUI();
-                    showNotification('Signed in!');
-                    addDebugMessage('Sign in completed successfully');
-                }).catch(error => {
-                    logDebug('Sign in error', error);
-                    console.error('Sign in error:', error);
-                    showNotification('Sign in failed', 'error');
-                    addDebugMessage(`Sign in failed: ${error.message || 'Unknown error'}`);
-                });
-            } catch (error) {
-                logDebug('Sign in exception', error);
-                console.error('Sign in error:', error);
-                showNotification('Sign in error', 'error');
-                addDebugMessage(`Sign in exception: ${error.message}`);
-            }
-        }
-
-        // Sign out handler
-        function handleSignOut() {
-            logDebug('Sign out initiated');
-            try {
-                if (typeof puter === 'undefined') {
-                    logDebug('Puter SDK not loaded during sign out');
-                    showNotification('SDK error', 'error');
-                    addDebugMessage('Error: Puter SDK not loaded');
-                    return;
-                }
-                
-                if (!puter.auth) {
-                    logDebug('Puter auth module not available during sign out');
-                    showNotification('Auth error', 'error');
-                    addDebugMessage('Error: Puter auth module not available');
-                    return;
-                }
-                
-                if (!puter.auth.signOut) {
-                    logDebug('puter.auth.signOut function not found');
-                    showNotification('Sign out error', 'error');
-                    addDebugMessage('Error: puter.auth.signOut function not found');
-                    return;
-                }
-                
-                addDebugMessage('Calling puter.auth.signOut()');
-                puter.auth.signOut();
-                logDebug('Sign out completed');
-                updateAuthUI();
-                showNotification('Signed out!');
-                addDebugMessage('Sign out completed successfully');
-            } catch (error) {
-                logDebug('Sign out exception', error);
-                console.error('Sign out error:', error);
-                showNotification('Sign out error', 'error');
-                addDebugMessage(`Sign out exception: ${error.message}`);
-            }
-        }
-        
-        // Debug toggle
-        function toggleDebug() {
-            debugContent.classList.toggle('hidden');
-            if (!debugContent.classList.contains('hidden')) {
+            if (!elements.debugPanel.classList.contains('hidden')) {
                 updateDebugPanel();
             }
         }
         
-        // Clear debug logs
-        function clearDebugLogs() {
-            debugLogs.length = 0;
-            updateDebugPanel();
+        function updateDebugPanel() {
+            const html = state.debugLogs.slice(-50).reverse().map(entry => {
+                const levelColor = {
+                    info: 'var(--text-secondary)',
+                    success: 'var(--success)',
+                    error: 'var(--error)',
+                    warning: 'var(--warning)'
+                }[entry.level];
+                
+                return `
+                    <div class="debug-entry">
+                        <div class="debug-time">${entry.timestamp}</div>
+                        <div class="debug-message" style="color: ${levelColor}">${entry.message}</div>
+                        ${entry.data ? `<div class="debug-data">${JSON.stringify(entry.data, null, 2)}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+            
+            elements.debugContent.innerHTML = html;
         }
-
-        // Event listeners
-        signInBtn.addEventListener('click', handleSignIn);
-        signOutBtn.addEventListener('click', handleSignOut);
-        signInPromptBtn.addEventListener('click', handleSignIn);
-        debugBtn.addEventListener('click', toggleDebug);
-        debugToggle.addEventListener('click', toggleDebug);
-        clearDebugBtn.addEventListener('click', clearDebugLogs);
-
-        // Initialize auth state when Puter SDK is ready
-        logDebug('Page loaded, initializing');
         
-        if (typeof puter !== 'undefined') {
-            logDebug('Puter SDK loaded');
+        // Notifications
+        function showNotification(message, type = 'success', duration = 3000) {
+            const icons = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle'
+            };
             
-            // Check what's available in puter object
-            const puterKeys = Object.keys(puter);
-            logDebug('Puter object keys', puterKeys);
+            elements.notification.innerHTML = `
+                <i class="fas ${icons[type]}"></i>
+                <span>${message}</span>
+            `;
+            elements.notification.className = `notification ${type}`;
             
-            if (puter.auth) {
-                const authKeys = Object.keys(puter.auth);
-                logDebug('Puter auth keys', authKeys);
+            setTimeout(() => {
+                elements.notification.classList.add('hidden');
+            }, duration);
+            
+            log(`Notification: ${message}`, { type }, type);
+        }
+        
+        // Format message content (basic markdown support)
+        function formatMessageContent(text) {
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`([^`]+)`/g, '<code>$1</code>')
+                .replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
+                .replace(/\n/g, '<br>');
+        }
+        
+        // Add message to chat
+        function addMessage(role, content, isStreaming = false) {
+            const messageId = `msg-${Date.now()}`;
+            const avatar = role === 'user' ? 
+                '<i class="fas fa-user"></i>' : 
+                '<i class="fas fa-robot"></i>';
+            
+            const messageHTML = `
+                <div class="message ${role}-message" id="${messageId}">
+                    <div class="message-wrapper">
+                        <div class="message-avatar">${avatar}</div>
+                        <div class="message-content">${isStreaming ? content : formatMessageContent(content)}</div>
+                    </div>
+                </div>
+            `;
+            
+            elements.typingIndicator.classList.add('hidden');
+            elements.chatMessages.insertAdjacentHTML('beforeend', messageHTML);
+            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+            
+            // Update empty state
+            elements.emptyState.classList.add('hidden');
+            
+            // Save to history
+            if (!isStreaming) {
+                state.conversationHistory.push({ role, content });
+                saveConversation();
             }
             
-            // Check if already initialized
-            setTimeout(updateAuthUI, 1000); // Give SDK time to initialize
-        } else {
-            logDebug('Puter SDK not found');
-            addDebugMessage('Error: Puter SDK not loaded');
+            return messageId;
         }
+        
+        // Update streaming message
+        function updateStreamingMessage(messageId, content) {
+            const messageElement = document.getElementById(messageId);
+            if (messageElement) {
+                const contentElement = messageElement.querySelector('.message-content');
+                contentElement.textContent = content;
+                elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+            }
+        }
+        
+        // Send message to AI
+        async function sendMessage(userMessage) {
+            if (state.isProcessing) return;
+            
+            state.isProcessing = true;
+            elements.sendButton.disabled = true;
+            
+            const model = state.currentModel;
+            const modelConfig = MODELS[model];
+            
+            log(`Sending message to ${model}`, { message: userMessage });
+            
+            // Add user message
+            addMessage('user', userMessage);
+            
+            // Show typing indicator
+            elements.typingIndicator.classList.remove('hidden');
+            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+            
+            try {
+                // ВАЖНОЕ ИСПРАВЛЕНИЕ: Передаем правильное название модели
+                const chatOptions = {
+                    model: model,  // Используем правильное название модели
+                    stream: modelConfig.streaming
+                };
+                
+                log(`Chat options:`, chatOptions);
+                
+                if (modelConfig.streaming) {
+                    // Streaming response
+                    const response = await puter.ai.chat(userMessage, chatOptions);
+                    
+                    const messageId = addMessage('ai', '', true);
+                    let fullResponse = '';
+                    
+                    for await (const chunk of response) {
+                        if (chunk?.text) {
+                            fullResponse += chunk.text;
+                            updateStreamingMessage(messageId, fullResponse);
+                        }
+                    }
+                    
+                    // Final update with formatted content
+                    const messageElement = document.getElementById(messageId);
+                    if (messageElement) {
+                        const contentElement = messageElement.querySelector('.message-content');
+                        contentElement.innerHTML = formatMessageContent(fullResponse);
+                    }
+                    
+                    state.conversationHistory.push({ role: 'ai', content: fullResponse });
+                    saveConversation();
+                    
+                } else {
+                    // Non-streaming response
+                    const response = await puter.ai.chat(userMessage, chatOptions);
+                    
+                    let responseText = '';
+                    if (response?.message?.content?.[0]?.text) {
+                        responseText = response.message.content[0].text;
+                    } else if (typeof response === 'string') {
+                        responseText = response;
+                    } else if (response?.text) {
+                        responseText = response.text;
+                    } else {
+                        throw new Error('Unexpected response format');
+                    }
+                    
+                    addMessage('ai', responseText);
+                }
+                
+                log('Message sent successfully', null, 'success');
+                
+            } catch (error) {
+                log('Error sending message', error, 'error');
+                console.error('Chat error:', error);
+                
+                addMessage('ai', `I apologize, but I encountered an error: ${error.message || 'Unknown error'}. Please try again.`);
+                showNotification('Failed to get response', 'error');
+            } finally {
+                elements.typingIndicator.classList.add('hidden');
+                elements.sendButton.disabled = false;
+                state.isProcessing = false;
+                elements.userInput.focus();
+            }
+        }
+        
+        // Save conversation to localStorage
+        function saveConversation() {
+            try {
+                localStorage.setItem('chatHistory', JSON.stringify(state.conversationHistory));
+            } catch (error) {
+                log('Failed to save conversation', error, 'warning');
+            }
+        }
+        
+        // Load conversation from localStorage
+        function loadConversation() {
+            try {
+                const saved = localStorage.getItem('chatHistory');
+                if (saved) {
+                    state.conversationHistory = JSON.parse(saved);
+                    state.conversationHistory.forEach(msg => {
+                        addMessage(msg.role, msg.content);
+                    });
+                    log('Conversation loaded', { count: state.conversationHistory.length });
+                }
+            } catch (error) {
+                log('Failed to load conversation', error, 'warning');
+            }
+        }
+        
+        // Clear chat
+        function clearChat() {
+            elements.chatMessages.innerHTML = '';
+            state.conversationHistory = [];
+            localStorage.removeItem('chatHistory');
+            elements.emptyState.classList.remove('hidden');
+            showNotification('Chat cleared', 'success');
+            log('Chat cleared');
+        }
+        
+        // Update auth UI
+        function updateAuthUI() {
+            try {
+                if (typeof puter === 'undefined' || !puter.auth) {
+                    throw new Error('Puter SDK not available');
+                }
+                
+                const isSignedIn = puter.auth.isSignedIn();
+                state.isAuthenticated = isSignedIn;
+                
+                if (isSignedIn) {
+                    elements.signInBtn.classList.add('hidden');
+                    elements.signOutBtn.classList.remove('hidden');
+                    elements.authPrompt.classList.add('hidden');
+                    elements.userInput.disabled = false;
+                    elements.sendButton.disabled = false;
+                    
+                    if (state.conversationHistory.length === 0) {
+                        elements.emptyState.classList.remove('hidden');
+                    }
+                    
+                    log('User authenticated', null, 'success');
+                } else {
+                    elements.signInBtn.classList.remove('hidden');
+                    elements.signOutBtn.classList.add('hidden');
+                    elements.authPrompt.classList.remove('hidden');
+                    elements.emptyState.classList.add('hidden');
+                    elements.userInput.disabled = true;
+                    elements.sendButton.disabled = true;
+                    
+                    log('User not authenticated', null, 'warning');
+                }
+            } catch (error) {
+                log('Auth check failed', error, 'error');
+                showNotification('Authentication error', 'error');
+            }
+        }
+        
+        // Handle sign in
+        async function handleSignIn() {
+            try {
+                log('Initiating sign in');
+                await puter.auth.signIn();
+                updateAuthUI();
+                showNotification('Successfully signed in!', 'success');
+            } catch (error) {
+                log('Sign in failed', error, 'error');
+                showNotification('Sign in failed', 'error');
+            }
+        }
+        
+        // Handle sign out
+        function handleSignOut() {
+            try {
+                log('Signing out');
+                puter.auth.signOut();
+                updateAuthUI();
+                showNotification('Successfully signed out', 'success');
+            } catch (error) {
+                log('Sign out failed', error, 'error');
+                showNotification('Sign out failed', 'error');
+            }
+        }
+        
+        // Update model info
+        function updateModelInfo() {
+            const model = elements.modelSelect.value;
+            const config = MODELS[model];
+            
+            if (config) {
+                elements.modelInfo.innerHTML = `
+                    <i class="fas fa-info-circle"></i>
+                    <span>${config.icon} ${config.name}</span>
+                `;
+                state.currentModel = model;
+                log(`Model changed to ${model}`);
+            }
+        }
+        
+        // Event listeners
+        elements.sendButton.addEventListener('click', () => {
+            const message = elements.userInput.value.trim();
+            if (message && !state.isProcessing) {
+                elements.userInput.value = '';
+                sendMessage(message);
+            }
+        });
+        
+        elements.userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                elements.sendButton.click();
+            }
+        });
+        
+        elements.modelSelect.addEventListener('change', updateModelInfo);
+        elements.signInBtn.addEventListener('click', handleSignIn);
+        elements.signOutBtn.addEventListener('click', handleSignOut);
+        elements.signInPromptBtn.addEventListener('click', handleSignIn);
+        elements.clearChatBtn.addEventListener('click', clearChat);
+        
+        elements.debugBtn.addEventListener('click', () => {
+            elements.debugPanel.classList.toggle('hidden');
+            if (!elements.debugPanel.classList.contains('hidden')) {
+                updateDebugPanel();
+            }
+        });
+        
+        elements.clearDebugBtn.addEventListener('click', () => {
+            state.debugLogs = [];
+            updateDebugPanel();
+            showNotification('Debug logs cleared', 'success');
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Application initializing');
+            
+            // Check Puter availability
+            if (typeof puter !== 'undefined') {
+                log('Puter SDK loaded', { version: puter.version });
+                
+                // Wait for SDK to fully initialize
+                setTimeout(() => {
+                    updateAuthUI();
+                    loadConversation();
+                }, 500);
+            } else {
+                log('Puter SDK not found', null, 'error');
+                showNotification('Failed to load Puter SDK', 'error');
+            }
+            
+            updateModelInfo();
+        });
     </script>
 </body>
 </html>
