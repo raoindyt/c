@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Model Verification Tool</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        :root {
+            --bg-primary: #121212;
+            --bg-secondary: #1e1e1e;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #ffffff;
+            --text-secondary: #b0b0b0;
+            --accent: #bb86fc;
+            --success: #03dac6;
+            --error: #cf6679;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            background-color: var(--bg-secondary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            margin-bottom: 20px;
+        }
+        
+        h1, h2 {
+            color: var(--accent);
+        }
+        
+        select, button {
+            background-color: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--accent);
+            border-radius: 6px;
+            padding: 10px;
+            margin: 5px;
+        }
+        
+        button {
+            background-color: var(--accent);
+            color: #000;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--accent);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
+        .error {
+            border-color: var(--error);
+            color: var(--error);
+        }
+        
+        .success {
+            border-color: var(--success);
+            color: var(--success);
+        }
+        
+        .info {
+            background-color: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+            font-size: 0.9rem;
+        }
+        
+        .model-card {
+            background-color: var(--bg-tertiary);
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .model-name {
+            font-weight: bold;
+            color: var(--accent);
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Model Verification Tool</h1>
+    
+    <div class="info">
+        <p>This tool helps verify which AI model is actually responding to your requests.</p>
+    </div>
+    
+    <div class="container">
+        <h2>Single Model Test</h2>
+        <select id="model-select">
+            <option value="claude-sonnet-4-latest">Claude Sonnet 4 (Latest)</option>
+            <option value="claude-opus-4-latest">Claude Opus 4 (Latest)</option>
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (2025)</option>
+            <option value="claude-opus-4-1">Claude Opus 4.1</option>
+            <option value="claude-sonnet-4-20240620">Claude Sonnet 4 (2024)</option>
+            <option value="claude-opus-4-20240620">Claude Opus 4 (2024)</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4o">GPT-4o</option>
+        </select>
+        <button id="test-model">Test Selected Model</button>
+        <div id="model-result" class="result"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Comprehensive Model Comparison</h2>
+        <button id="test-all-models">Test All Models</button>
+        <div id="all-models-result"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Model Information</h2>
+        <div class="model-card">
+            <div class="model-name">Claude Sonnet 4 (Latest)</div>
+            <div>Model ID: claude-sonnet-4-latest</div>
+            <div>Expected: Latest Claude Sonnet model</div>
+        </div>
+        <div class="model-card">
+            <div class="model-name">Claude Opus 4 (Latest)</div>
+            <div>Model ID: claude-opus-4-latest</div>
+            <div>Expected: Most capable Claude model</div>
+        </div>
+        <div class="model-card">
+            <div class="model-name">Claude Sonnet 4 (2025)</div>
+            <div>Model ID: claude-sonnet-4-20250514</div>
+            <div>Expected: Updated Sonnet model from 2025</div>
+        </div>
+        <div class="model-card">
+            <div class="model-name">Claude Opus 4.1</div>
+            <div>Model ID: claude-opus-4-1</div>
+            <div>Expected: Updated Opus model</div>
+        </div>
+    </div>
+
+    <script>
+        // Test a single model
+        async function testSelectedModel() {
+            const modelSelect = document.getElementById('model-select');
+            const modelName = modelSelect.value;
+            const modelLabel = modelSelect.options[modelSelect.selectedIndex].text;
+            const testButton = document.getElementById('test-model');
+            const resultDiv = document.getElementById('model-result');
+            
+            // Save original button text
+            const originalText = testButton.textContent;
+            testButton.textContent = 'Testing...';
+            testButton.disabled = true;
+            
+            try {
+                resultDiv.textContent = `Testing: ${modelLabel} (${modelName})\n\n`;
+                resultDiv.className = 'result';
+                
+                // Test 1: Direct model identification
+                const identityResponse = await puter.ai.chat(
+                    "What exact model are you? Respond with only the model name and version.", 
+                    {model: modelName}
+                );
+                
+                let identityText = '';
+                if (identityResponse && identityResponse.message && identityResponse.message.content && identityResponse.message.content[0] && identityResponse.message.content[0].text) {
+                    identityText = identityResponse.message.content[0].text;
+                } else if (identityResponse && typeof identityResponse === 'string') {
+                    identityText = identityResponse;
+                } else {
+                    identityText = JSON.stringify(identityResponse);
+                }
+                
+                // Test 2: Capabilities test
+                const capabilityResponse = await puter.ai.chat(
+                    "What are your key capabilities and limitations? Be specific about your model version.", 
+                    {model: modelName}
+                );
+                
+                let capabilityText = '';
+                if (capabilityResponse && capabilityResponse.message && capabilityResponse.message.content && capabilityResponse.message.content[0] && capabilityResponse.message.content[0].text) {
+                    capabilityText = capabilityResponse.message.content[0].text;
+                } else if (capabilityResponse && typeof capabilityResponse === 'string') {
+                    capabilityText = capabilityResponse;
+                } else {
+                    capabilityText = JSON.stringify(capabilityResponse);
+                }
+                
+                resultDiv.textContent += `Requested Model: ${modelName}\n`;
+                resultDiv.textContent += `Model Self-Identification: ${identityText}\n\n`;
+                resultDiv.textContent += `Capabilities Report:\n${capabilityText}\n\n`;
+                
+                // Check if requested model matches reported model
+                if (identityText.toLowerCase().includes(modelName.toLowerCase()) || 
+                    modelName.toLowerCase().includes(identityText.toLowerCase().replace(/\s+/g, '-'))) {
+                    resultDiv.textContent += "✅ Model match confirmed\n";
+                    resultDiv.className = 'result success';
+                } else {
+                    resultDiv.textContent += "⚠️ Model mismatch detected - you requested one model but got another\n";
+                    resultDiv.className = 'result error';
+                }
+                
+            } catch (error) {
+                resultDiv.textContent = `Error testing ${modelName}: ${error.message}`;
+                resultDiv.className = 'result error';
+                console.error('Error:', error);
+            } finally {
+                // Restore button
+                testButton.textContent = originalText;
+                testButton.disabled = false;
+            }
+        }
+        
+        // Test all models
+        async function testAllModels() {
+            const models = [
+                {name: 'claude-sonnet-4-latest', label: 'Claude Sonnet 4 (Latest)'},
+                {name: 'claude-opus-4-latest', label: 'Claude Opus 4 (Latest)'},
+                {name: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (2025)'},
+                {name: 'claude-opus-4-1', label: 'Claude Opus 4.1'},
+                {name: 'claude-sonnet-4-20240620', label: 'Claude Sonnet 4 (2024)'},
+                {name: 'claude-opus-4-20240620', label: 'Claude Opus 4 (2024)'}
+            ];
+            
+            const testButton = document.getElementById('test-all-models');
+            const resultDiv = document.getElementById('all-models-result');
+            
+            // Save original button text
+            const originalText = testButton.textContent;
+            testButton.textContent = 'Testing All Models...';
+            testButton.disabled = true;
+            
+            try {
+                resultDiv.innerHTML = '<div class="result">Testing all models...\n\n</div>';
+                
+                for (const model of models) {
+                    try {
+                        const modelResult = document.createElement('div');
+                        modelResult.className = 'result';
+                        modelResult.innerHTML = `<strong>Testing ${model.label} (${model.name})</strong>\n`;
+                        
+                        const response = await puter.ai.chat(
+                            "What exact model are you? Respond with only the model name.", 
+                            {model: model.name}
+                        );
+                        
+                        let responseText = '';
+                        if (response && response.message && response.message.content && response.message.content[0] && response.message.content[0].text) {
+                            responseText = response.message.content[0].text;
+                        } else if (response && typeof response === 'string') {
+                            responseText = response;
+                        } else {
+                            responseText = JSON.stringify(response);
+                        }
+                        
+                        modelResult.innerHTML += `Requested: ${model.name}\n`;
+                        modelResult.innerHTML += `Reported: ${responseText}\n`;
+                        
+                        // Check match
+                        if (responseText.toLowerCase().includes(model.name.toLowerCase()) || 
+                            model.name.toLowerCase().includes(responseText.toLowerCase().replace(/\s+/g, '-'))) {
+                            modelResult.innerHTML += "✅ Match\n";
+                            modelResult.className = 'result success';
+                        } else {
+                            modelResult.innerHTML += "⚠️ Mismatch\n";
+                            modelResult.className = 'result error';
+                        }
+                        
+                        resultDiv.appendChild(modelResult);
+                        resultDiv.appendChild(document.createElement('br'));
+                        
+                    } catch (error) {
+                        const errorResult = document.createElement('div');
+                        errorResult.className = 'result error';
+                        errorResult.innerHTML = `<strong>Error testing ${model.label}:</strong> ${error.message}\n\n`;
+                        resultDiv.appendChild(errorResult);
+                        resultDiv.appendChild(document.createElement('br'));
+                    }
+                }
+            } catch (error) {
+                const errorResult = document.createElement('div');
+                errorResult.className = 'result error';
+                errorResult.textContent = `Error in testing: ${error.message}`;
+                resultDiv.appendChild(errorResult);
+                console.error('Error:', error);
+            } finally {
+                // Restore button
+                testButton.textContent = originalText;
+                testButton.disabled = false;
+            }
+        }
+
+        // Add event listeners
+        document.getElementById('test-model').addEventListener('click', testSelectedModel);
+        document.getElementById('test-all-models').addEventListener('click', testAllModels);
+        
+        // Initialize
+        window.addEventListener('load', () => {
+            console.log('Model Verification Tool loaded');
+        });
+    </script>
+</body>
+</html>

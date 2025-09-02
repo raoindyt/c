@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Model Diagnostic Tool</title>
+    <script src="https://js.puter.com/v2/"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #121212;
+            color: #ffffff;
+        }
+        .test-container {
+            background-color: #1e1e1e;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            margin-bottom: 20px;
+        }
+        select, button {
+            background-color: #2d2d2d;
+            color: #ffffff;
+            padding: 10px;
+            border: 1px solid #bb86fc;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        button {
+            background-color: #bb86fc;
+            color: #000;
+            cursor: pointer;
+        }
+        button:hover {
+            opacity: 0.8;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .result {
+            background-color: #2d2d2d;
+            border: 1px solid #bb86fc;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            border-color: #cf6679;
+            color: #cf6679;
+        }
+        .success {
+            border-color: #03dac6;
+            color: #03dac6;
+        }
+        .info {
+            background-color: #2d2d2d;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Model Diagnostic Tool</h1>
+    
+    <div class="info">
+        <p>This tool helps diagnose which AI model is actually being used when you select a specific model.</p>
+    </div>
+    
+    <div class="test-container">
+        <h2>Model Identification Test</h2>
+        <select id="model-select">
+            <option value="claude-sonnet-4-latest">Claude Sonnet 4 (Latest)</option>
+            <option value="claude-opus-4-latest">Claude Opus 4 (Latest)</option>
+            <option value="claude-sonnet-4-20250514">Claude Sonnet 4 (2025)</option>
+            <option value="claude-opus-4-1">Claude Opus 4.1</option>
+            <option value="claude-sonnet-4-20240620">Claude Sonnet 4 (2024)</option>
+            <option value="claude-opus-4-20240620">Claude Opus 4 (2024)</option>
+            <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Reference)</option>
+            <option value="gpt-4">GPT-4</option>
+            <option value="gpt-4o">GPT-4o</option>
+        </select>
+        <button id="test-model">Test Selected Model</button>
+        <div id="model-result" class="result"></div>
+    </div>
+    
+    <div class="test-container">
+        <h2>Direct Model Query Test</h2>
+        <button id="test-all-models">Test All Claude 4 Models</button>
+        <div id="all-models-result" class="result"></div>
+    </div>
+
+    <script>
+        async function testSelectedModel() {
+            const modelSelect = document.getElementById('model-select');
+            const modelName = modelSelect.value;
+            const buttonText = document.getElementById('test-model');
+            const resultDiv = document.getElementById('model-result');
+            
+            // Save original button text
+            const originalText = buttonText.textContent;
+            buttonText.textContent = 'Testing...';
+            buttonText.disabled = true;
+            
+            try {
+                resultDiv.textContent = `Testing model: ${modelName}\nSending request...`;
+                resultDiv.className = 'result';
+                
+                // Test 1: Ask the model to identify itself
+                const identityResponse = await puter.ai.chat(
+                    "What exact model are you? Please respond with only the model name and nothing else.", 
+                    {model: modelName}
+                );
+                
+                let identityText = '';
+                if (identityResponse && identityResponse.message && identityResponse.message.content && identityResponse.message.content[0] && identityResponse.message.content[0].text) {
+                    identityText = identityResponse.message.content[0].text;
+                } else if (identityResponse && typeof identityResponse === 'string') {
+                    identityText = identityResponse;
+                } else {
+                    identityText = JSON.stringify(identityResponse);
+                }
+                
+                // Test 2: Ask a model-specific question
+                const capabilityResponse = await puter.ai.chat(
+                    "What are your key capabilities? Mention your model version in your response.", 
+                    {model: modelName}
+                );
+                
+                let capabilityText = '';
+                if (capabilityResponse && capabilityResponse.message && capabilityResponse.message.content && capabilityResponse.message.content[0] && capabilityResponse.message.content[0].text) {
+                    capabilityText = capabilityResponse.message.content[0].text;
+                } else if (capabilityResponse && typeof capabilityResponse === 'string') {
+                    capabilityText = capabilityResponse;
+                } else {
+                    capabilityText = JSON.stringify(capabilityResponse);
+                }
+                
+                resultDiv.textContent = `Model Tested: ${modelName}\n\nModel Self-Identification:\n${identityText}\n\nModel Capabilities:\n${capabilityText}`;
+                resultDiv.className = 'result success';
+            } catch (error) {
+                resultDiv.textContent = `Error testing ${modelName}: ${error.message}`;
+                resultDiv.className = 'result error';
+                console.error('Error:', error);
+            } finally {
+                // Restore button
+                buttonText.textContent = originalText;
+                buttonText.disabled = false;
+            }
+        }
+        
+        async function testAllClaude4Models() {
+            const models = [
+                {name: 'claude-sonnet-4-latest', label: 'Claude Sonnet 4 (Latest)'},
+                {name: 'claude-opus-4-latest', label: 'Claude Opus 4 (Latest)'},
+                {name: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (2025)'},
+                {name: 'claude-opus-4-1', label: 'Claude Opus 4.1'},
+                {name: 'claude-sonnet-4-20240620', label: 'Claude Sonnet 4 (2024)'},
+                {name: 'claude-opus-4-20240620', label: 'Claude Opus 4 (2024)'}
+            ];
+            
+            const buttonText = document.getElementById('test-all-models');
+            const resultDiv = document.getElementById('all-models-result');
+            
+            // Save original button text
+            const originalText = buttonText.textContent;
+            buttonText.textContent = 'Testing All Models...';
+            buttonText.disabled = true;
+            
+            try {
+                resultDiv.textContent = 'Testing all Claude 4 models...\n\n';
+                resultDiv.className = 'result';
+                
+                for (const model of models) {
+                    try {
+                        resultDiv.textContent += `Testing ${model.label} (${model.name})...\n`;
+                        
+                        const response = await puter.ai.chat(
+                            "What exact model are you? Respond with only the model name.", 
+                            {model: model.name}
+                        );
+                        
+                        let responseText = '';
+                        if (response && response.message && response.message.content && response.message.content[0] && response.message.content[0].text) {
+                            responseText = response.message.content[0].text;
+                        } else if (response && typeof response === 'string') {
+                            responseText = response;
+                        } else {
+                            responseText = JSON.stringify(response);
+                        }
+                        
+                        resultDiv.textContent += `  Reported as: ${responseText}\n\n`;
+                    } catch (error) {
+                        resultDiv.textContent += `  Error: ${error.message}\n\n`;
+                    }
+                }
+                
+                resultDiv.className = 'result success';
+            } catch (error) {
+                resultDiv.textContent = `Error in testing: ${error.message}`;
+                resultDiv.className = 'result error';
+                console.error('Error:', error);
+            } finally {
+                // Restore button
+                buttonText.textContent = originalText;
+                buttonText.disabled = false;
+            }
+        }
+
+        // Add event listeners
+        document.getElementById('test-model').addEventListener('click', testSelectedModel);
+        document.getElementById('test-all-models').addEventListener('click', testAllClaude4Models);
+        
+        // Test the selected model on page load for quick verification
+        window.addEventListener('load', () => {
+            console.log('Model Diagnostic Tool loaded');
+        });
+    </script>
+</body>
+</html>

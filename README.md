@@ -7,8 +7,10 @@ A minimalist dark-themed chat interface for interacting with various AI models t
 - Dark minimalist design with clean aesthetics
 - User authentication and registration via Puter
 - Support for multiple AI models:
-  - Claude Sonnet 4 (default)
-  - Claude Opus 4
+  - Claude Sonnet 4 (Latest) (default)
+  - Claude Opus 4 (Latest)
+  - Claude Sonnet 4 (2025)
+  - Claude Opus 4.1
   - GPT-4
   - GPT-3.5 Turbo
 - Streaming responses for Claude models
@@ -90,7 +92,7 @@ This application integrates with Puter's AI services:
 
 - **AI Chat**: `puter.ai.chat()` for conversational AI
 - **Authentication**: `puter.auth.*` for user management
-- **Models**: Supports multiple AI models including Claude Sonnet 4
+- **Models**: Supports multiple AI models including Claude Sonnet 4 (Latest)
 
 ## Browser Support
 
